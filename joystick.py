@@ -41,12 +41,9 @@ env.render()
 # Used for computer vision
 image = env.render('rgb_array')
 
-# Not sure what dt stands for lol
-def update(dt):
-    """
-        This method is called every frame to update the screen.
-        This method handles the movement of the duckiebot.
-    """
+def read_joystick():
+    global joystick
+
     # left-right on a joystick
     x = round(joystick.x, 2)
     # up-down on a joystick
@@ -91,13 +88,14 @@ def update(dt):
         # We are not trying to move, make sure we don't
         vel_left, vel_right = 0, 0
     else:
-        # Calculate the adjustment for the wheel (left wheel if we try to go left, right if we want to go right)
-        adjustment = -direction * velocity * (x**2)
-
         # Adjust the velocities of both wheels given our adjustment
         # We always want the wheels to move at the speed given by the user unless we are turning
-        vel_left = velocity + adjustment if x < 0 else velocity
-        vel_right = velocity + adjustment if x > 0 else velocity
+        vel_left = (1 - x**2) * velocity if x < 0 else velocity
+        vel_right = (1 - x**2) * velocity if x > 0 else velocity
+
+        # We did them in the wrong order if we're going backwards
+        if direction == -1:
+            vel_left, vel_right = vel_right, vel_left
 
         # Cap the speed at the base_velocity, we don't want the bot to go flying off
         if direction > 0:
@@ -108,6 +106,16 @@ def update(dt):
             # We are going backward
             vel_left, vel_right = max(-base_velocity, vel_left), max(-base_velocity, vel_right)
             vel_left, vel_right = min(0, vel_left), min(0, vel_right)
+
+    return vel_left, vel_right
+
+# Not sure what dt stands for lol
+def update(dt):
+    """
+        This method is called every frame to update the screen.
+        This method handles the movement of the duckiebot.
+    """
+    vel_left, vel_right = read_joystick()
 
     image = env.move([vel_left, vel_right])
 
