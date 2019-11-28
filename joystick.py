@@ -5,6 +5,7 @@
     It allows for more control than the original script
 """
 from duckietown import Duckietown
+import computer_vision
 
 import pyglet
 import cv2 as cv
@@ -113,6 +114,19 @@ def update(dt):
         This method handles the movement of the duckiebot.
     """
     vel_left, vel_right = read_joystick()
+
+    # Used for computer vision
+    image = env.render('rgb_array')
+
+    output_image = cv.cvtColor(image.copy(), cv.COLOR_RGB2BGR)
+
+    detected, output_image = computer_vision.stop_line(image, output_image)
+
+    if detected:
+        vel_left, vel_right = 0, 0
+
+    cv.imshow('stop', output_image)
+    cv.waitKey(1)
 
     image = env.move([vel_left, vel_right])
 
