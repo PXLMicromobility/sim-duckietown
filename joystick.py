@@ -38,9 +38,6 @@ env = Duckietown(
 env.reset()
 env.render()
 
-# Used for computer vision
-image = env.render('rgb_array')
-
 def read_joystick():
     global joystick
 
