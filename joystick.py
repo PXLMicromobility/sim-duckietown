@@ -18,10 +18,10 @@ import argparse
 
 parser = argparse.ArgumentParser(description='This script allows you to control a robot through a joystick in a gym environement')
 # parser.add_argument('--map-name', default='udem1', help='the name of the map')
-# parser.add_argument('--map-name', default='4way', help='the name of the map')
+parser.add_argument('--map-name', default='4way', help='the name of the map')
 # parser.add_argument('--map-name', default='loop_dyn_duckiebots', help='the name of the map')
 # parser.add_argument('--map-name', default='regress_4way_adam', help='the name of the map')
-parser.add_argument('--map-name', default='zigzag_dists', help='the name of the map')
+# parser.add_argument('--map-name', default='zigzag_dists', help='the name of the map')
 
 # The store_true option automatically creates a default value of False.
 parser.add_argument('--distortion', action='store_true', help='enable fish-eye effect on camera (bool)')
@@ -39,6 +39,10 @@ env = Duckietown(
 env.reset()
 env.render()
 
+# Can the driver (user) overwrite the actions dictated by the computer-vision
+overwrite = False
+
+
 def read_joystick():
     global joystick
 
@@ -46,28 +50,6 @@ def read_joystick():
     x = round(joystick.x, 2)
     # up-down on a joystick
     y = -round(joystick.y, 2)
-
-    # A truth table for every button (bool)
-    # This is for a Dualshock 4 controller (PS4)
-    keys = {
-        "cross": joystick.buttons[0],
-        "circle": joystick.buttons[1],
-        "triangle": joystick.buttons[2],
-        "square": joystick.buttons[3],
-
-        "L1": joystick.buttons[4],
-        "R1": joystick.buttons[5],
-        "L2": joystick.buttons[6],
-        "R2": joystick.buttons[7],
-
-        "share": joystick.buttons[8],
-        "options": joystick.buttons[9],
-        "power": joystick.buttons[10],
-
-        # These are actual presses on the joysticks, not all controllers have this
-        # "joy_left": joystick.buttons[11],
-        # "joy_right": joystick.buttons[12]
-    }
 
     # Make sure that we only use inputs that are actually usefull
     x, y = x if abs(x) > 0.01 else 0, y if abs(y) > 0.01 else 0
@@ -107,6 +89,39 @@ def read_joystick():
 
     return vel_left, vel_right
 
+@env.unwrapped.window.event
+def on_joybutton_press(joystick, button):
+    global overwrite, args
+
+    # A truth table for every button (bool)
+    # This is for a Dualshock 4 controller (PS4)
+    keys = {
+        "cross": joystick.buttons[0],
+        "circle": joystick.buttons[1],
+        "triangle": joystick.buttons[2],
+        "square": joystick.buttons[3],
+
+        "L1": joystick.buttons[4],
+        "R1": joystick.buttons[5],
+        "L2": joystick.buttons[6],
+        "R2": joystick.buttons[7],
+
+        "share": joystick.buttons[8],
+        "options": joystick.buttons[9],
+        "power": joystick.buttons[10],
+
+        # These are actual presses on the joysticks, not all controllers have this
+        # "joy_left": joystick.buttons[11],
+        # "joy_right": joystick.buttons[12]
+    }
+
+    if (keys['cross'] or button == 0) and not overwrite:
+        print("Turning on overwrite mode")
+        overwrite = True
+    elif (keys['circle'] or button == 1) and overwrite:
+        print("Turning off overwrite mode")
+        overwrite = False
+
 # Not sure what dt stands for lol
 def update(dt):
     """
@@ -122,7 +137,7 @@ def update(dt):
 
     detected, output_image = computer_vision.stop_line(image, output_image)
 
-    if detected:
+    if not overwrite and detected:
         vel_left, vel_right = 0, 0
 
     cv.imshow('stop', output_image)
@@ -147,6 +162,7 @@ def main():
     joystick = joysticks[0]
 
     joystick.open()
+    joystick.push_handlers(on_joybutton_press)
 
     cam_angle = env.unwrapped.cam_angle
     cam_angle[0] -= 5
