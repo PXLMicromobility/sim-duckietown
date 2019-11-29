@@ -5,6 +5,7 @@
     It allows for more control than the original script
 """
 from duckietown import Duckietown
+import computer_vision
 
 import pyglet
 import cv2 as cv
@@ -17,10 +18,10 @@ import argparse
 
 parser = argparse.ArgumentParser(description='This script allows you to control a robot through a joystick in a gym environement')
 # parser.add_argument('--map-name', default='udem1', help='the name of the map')
-# parser.add_argument('--map-name', default='4way', help='the name of the map')
+parser.add_argument('--map-name', default='4way', help='the name of the map')
 # parser.add_argument('--map-name', default='loop_dyn_duckiebots', help='the name of the map')
 # parser.add_argument('--map-name', default='regress_4way_adam', help='the name of the map')
-parser.add_argument('--map-name', default='zigzag_dists', help='the name of the map')
+# parser.add_argument('--map-name', default='zigzag_dists', help='the name of the map')
 
 # The store_true option automatically creates a default value of False.
 parser.add_argument('--distortion', action='store_true', help='enable fish-eye effect on camera (bool)')
@@ -38,41 +39,17 @@ env = Duckietown(
 env.reset()
 env.render()
 
-# Used for computer vision
-image = env.render('rgb_array')
+# Can the driver (user) overwrite the actions dictated by the computer-vision
+overwrite = False
 
-# Not sure what dt stands for lol
-def update(dt):
-    """
-        This method is called every frame to update the screen.
-        This method handles the movement of the duckiebot.
-    """
+
+def read_joystick():
+    global joystick
+
     # left-right on a joystick
     x = round(joystick.x, 2)
     # up-down on a joystick
     y = -round(joystick.y, 2)
-
-    # A truth table for every button (bool)
-    # This is for a Dualshock 4 controller (PS4)
-    keys = {
-        "cross": joystick.buttons[0],
-        "circle": joystick.buttons[1],
-        "triangle": joystick.buttons[2],
-        "square": joystick.buttons[3],
-
-        "L1": joystick.buttons[4],
-        "R1": joystick.buttons[5],
-        "L2": joystick.buttons[6],
-        "R2": joystick.buttons[7],
-
-        "share": joystick.buttons[8],
-        "options": joystick.buttons[9],
-        "power": joystick.buttons[10],
-
-        # These are actual presses on the joysticks, not all controllers have this
-        # "joy_left": joystick.buttons[11],
-        # "joy_right": joystick.buttons[12]
-    }
 
     # Make sure that we only use inputs that are actually usefull
     x, y = x if abs(x) > 0.01 else 0, y if abs(y) > 0.01 else 0
@@ -91,13 +68,14 @@ def update(dt):
         # We are not trying to move, make sure we don't
         vel_left, vel_right = 0, 0
     else:
-        # Calculate the adjustment for the wheel (left wheel if we try to go left, right if we want to go right)
-        adjustment = -direction * velocity * (x**2)
-
         # Adjust the velocities of both wheels given our adjustment
         # We always want the wheels to move at the speed given by the user unless we are turning
-        vel_left = velocity + adjustment if x < 0 else velocity
-        vel_right = velocity + adjustment if x > 0 else velocity
+        vel_left = (1 - x**2) * velocity if x < 0 else velocity
+        vel_right = (1 - x**2) * velocity if x > 0 else velocity
+
+        # We did them in the wrong order if we're going backwards
+        if direction == -1:
+            vel_left, vel_right = vel_right, vel_left
 
         # Cap the speed at the base_velocity, we don't want the bot to go flying off
         if direction > 0:
@@ -109,6 +87,69 @@ def update(dt):
             vel_left, vel_right = max(-base_velocity, vel_left), max(-base_velocity, vel_right)
             vel_left, vel_right = min(0, vel_left), min(0, vel_right)
 
+    return vel_left, vel_right
+
+
+@env.unwrapped.window.event
+def on_joybutton_press(_joystick, button):
+    global overwrite, args
+
+    # A truth table for every button (bool)
+    # This is for a Dualshock 4 controller (PS4)
+    keys = {
+        "cross": _joystick.buttons[0],
+        "circle": _joystick.buttons[1],
+        "triangle": _joystick.buttons[2],
+        "square": _joystick.buttons[3],
+
+        "L1": _joystick.buttons[4],
+        "R1": _joystick.buttons[5],
+        "L2": _joystick.buttons[6],
+        "R2": _joystick.buttons[7],
+
+        "share": _joystick.buttons[8],
+        "options": _joystick.buttons[9],
+        "power": _joystick.buttons[10],
+
+        # These are actual presses on the joysticks, not all controllers have this
+        # "joy_left": joystick.buttons[11],
+        # "joy_right": joystick.buttons[12]
+    }
+
+    if (keys['cross'] or button == 0) and not overwrite:
+        print("Turning on overwrite mode")
+        overwrite = True
+    elif (keys['circle'] or button == 1) and overwrite:
+        print("Turning off overwrite mode")
+        overwrite = False
+
+
+# Not sure what dt stands for lol
+def update(dt):
+    """
+        This method is called every frame to update the screen.
+        This method handles the movement of the duckiebot.
+    """
+    vel_left, vel_right = read_joystick()
+
+    # Used for computer vision
+    image = env.render('rgb_array')
+
+    output_image = cv.cvtColor(image.copy(), cv.COLOR_RGB2BGR)
+
+    trafficlight_color_detected, output_image = computer_vision.trafficlight(image, output_image)
+
+    if not overwrite:
+        if trafficlight_color_detected == 'red':
+            vel_left, vel_right = 0, 0
+        elif trafficlight_color_detected == 'green':
+            # Do something here?
+            pass
+
+    cv.imshow('trafficlight', output_image)
+    cv.waitKey(1)
+
+    # This returns the image, but we no longer need it :/
     image = env.move([vel_left, vel_right])
 
     env.render()
@@ -128,9 +169,10 @@ def main():
     joystick = joysticks[0]
 
     joystick.open()
+    joystick.push_handlers(on_joybutton_press)
 
     cam_angle = env.unwrapped.cam_angle
-    cam_angle[0] -= 5
+    cam_angle[0] -= 7
 
     # Enter main event loop
     pyglet.app.run()
