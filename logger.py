@@ -2,6 +2,7 @@ import numpy as np
 import os
 import shutil
 
+from zipfile import ZipFile
 from PIL import Image
 
 
@@ -19,6 +20,8 @@ class Logger:
 
         self._index = self._index_generator()
 
+        self.has_recorded = False
+
     def _index_generator(self):
         index = 0
         while True:
@@ -29,6 +32,9 @@ class Logger:
         return next(self._index)
 
     def writecsv(self, name: str, data: dict):
+        if not self.has_recorded:
+            self.has_recorded = True
+
         path = f'{self.location}/{name}'
 
         if not os.path.isfile(path):
@@ -43,7 +49,20 @@ class Logger:
         csv.close()
 
     def writeimg(self, name: str, img: np.ndarray):
+        if not self.has_recorded:
+            self.has_recorded = True
+
         path = f'{self.location}/images/{name}'
 
         img = Image.fromarray(img)
         img.save(path)
+
+    def log_to_zip(self):
+        with ZipFile(f'{self.location}.zip', 'w') as zf:
+            for item in os.listdir(self.location):
+                if item.endswith('.csv'):
+                    zf.write(os.path.join(self.location, item), item)
+                else:
+                    # We got a folder (images folder)
+                    for image in os.listdir(os.path.join(self.location, item)):
+                        zf.write(os.path.join(self.location, item, image), f'images/{image}')
