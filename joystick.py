@@ -95,7 +95,7 @@ def read_joystick():
 
 @env.unwrapped.window.event
 def on_joybutton_press(_joystick, button):
-    global recording, args
+    global recording, args, env, logger
 
     # A truth table for every button (bool)
     # This is for a Dual-shock 4 controller (PS4)
@@ -127,6 +127,14 @@ def on_joybutton_press(_joystick, button):
         print("Turning off recording mode")
         print('Location of log:', args.logging_location)
         recording = False
+    elif keys['options'] or button == 9:
+        if logger.has_recorded:
+            print("Writing the logs to a zip-file, don't exit")
+            logger.log_to_zip()
+
+        print("Stopping the simulation")
+        pyglet.app.exit()
+        env.close()
 
 
 # Not sure what dt stands for lol
@@ -182,7 +190,6 @@ def main():
     # Enter main event loop
     pyglet.app.run()
 
-    env.close()
 
 if __name__ == '__main__':
     main()
