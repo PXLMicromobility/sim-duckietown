@@ -43,7 +43,7 @@ env.render()
 recording = False
 
 # The logger
-logger = Logger(args.logging_location)
+logger = Logger(args.logging_location, begin_index=59)
 
 
 def read_joystick():
@@ -54,7 +54,7 @@ def read_joystick():
     # up-down on a joystick
     y = -round(joystick.y, 2)
 
-    # Make sure that we only use inputs that are actually usefull
+    # Make sure that we only use inputs that are actually useful
     x, y = x if abs(x) > 0.01 else 0, y if abs(y) > 0.01 else 0
 
     # How fast can each wheel move (0.35 gives you a maximum forward speed of about 0.4m/s)
@@ -128,13 +128,27 @@ def on_joybutton_press(_joystick, button):
         print('Location of log:', args.logging_location)
         recording = False
     elif keys['options'] or button == 9:
-        if logger.has_recorded:
-            print("Writing the logs to a zip-file, don't exit")
-            logger.log_to_zip()
-
         print("Stopping the simulation")
         pyglet.app.exit()
         env.close()
+    elif keys['share'] or button == 8:
+        if logger.has_recorded:
+            print("Writing the logs to a zip-file, don't exit")
+
+            overwrite = True
+            if logger.zip_exists():
+                mode = input('Do you want to overwrite? (y/n): ')
+
+                if mode == 'y':
+                    overwrite = True
+                elif mode == 'n':
+                    overwrite = False
+                else:
+                    print('oops?', mode, type(mode))
+                    return
+
+            logger.log_to_zip(overwrite=overwrite)
+            print("Done writing")
 
 
 # Not sure what dt stands for lol
