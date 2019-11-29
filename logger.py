@@ -17,17 +17,28 @@ class Logger:
 
         os.makedirs(self.images_folder)
 
+        self._index = self._index_generator()
+
+    def _index_generator(self):
+        index = 0
+        while True:
+            yield index
+            index += 1
+
+    def next_index(self):
+        return next(self._index)
+
     def writecsv(self, name: str, data: dict):
         path = f'{self.location}/{name}'
 
         if not os.path.isfile(path):
             print('Creating csv file')
             csv = open(path, 'w')
-            csv.write('vel_left,vel_right,joy_x,joy_y,timestamp')
+            csv.write('vel_left,vel_right,joy_x,joy_y,index\n')
         else:
             csv = open(path, 'a')
 
-        csv.write(f"{data['vel_left']},{data['vel_right']},{data['joy_x']},{data['joy_y']},{data['timestamp']}")
+        csv.write(f"{data['vel_left']},{data['vel_right']},{data['joy_x']},{data['joy_y']},{data['index']}\n")
 
         csv.close()
 
