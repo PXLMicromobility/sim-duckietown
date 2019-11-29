@@ -7,7 +7,7 @@ from PIL import Image
 
 
 class Logger:
-    def __init__(self, location):
+    def __init__(self, location: str, begin_index: int = 0):
         self.location = location
         self.images_folder = f'{self.location}/images'
 
@@ -18,12 +18,13 @@ class Logger:
 
         os.makedirs(self.images_folder)
 
-        self._index = self._index_generator()
+        self._index = self._index_generator(begin_index)
 
         self.has_recorded = False
 
-    def _index_generator(self):
-        index = 0
+    @staticmethod
+    def _index_generator(begin_index: int):
+        index = begin_index
         while True:
             yield index
             index += 1
