@@ -103,5 +103,8 @@ venv.bak/
 # mypy
 .mypy_cache/
 
+# .idea folder
+.idea/
+
 # Test scripts
 test.py

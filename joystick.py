@@ -89,30 +89,31 @@ def read_joystick():
 
     return vel_left, vel_right
 
+
 @env.unwrapped.window.event
-def on_joybutton_press(joystick, button):
+def on_joybutton_press(_joystick, button):
     global overwrite, args
 
     # A truth table for every button (bool)
     # This is for a Dualshock 4 controller (PS4)
     keys = {
-        "cross": joystick.buttons[0],
-        "circle": joystick.buttons[1],
-        "triangle": joystick.buttons[2],
-        "square": joystick.buttons[3],
+        "cross": _joystick.buttons[0],
+        "circle": _joystick.buttons[1],
+        "triangle": _joystick.buttons[2],
+        "square": _joystick.buttons[3],
 
-        "L1": joystick.buttons[4],
-        "R1": joystick.buttons[5],
-        "L2": joystick.buttons[6],
-        "R2": joystick.buttons[7],
+        "L1": _joystick.buttons[4],
+        "R1": _joystick.buttons[5],
+        "L2": _joystick.buttons[6],
+        "R2": _joystick.buttons[7],
 
-        "share": joystick.buttons[8],
-        "options": joystick.buttons[9],
-        "power": joystick.buttons[10],
+        "share": _joystick.buttons[8],
+        "options": _joystick.buttons[9],
+        "power": _joystick.buttons[10],
 
         # These are actual presses on the joysticks, not all controllers have this
-        # "joy_left": joystick.buttons[11],
-        # "joy_right": joystick.buttons[12]
+        # "joy_left": _joystick.buttons[11],
+        # "joy_right": _joystick.buttons[12]
     }
 
     if (keys['cross'] or button == 0) and not overwrite:
@@ -122,6 +123,7 @@ def on_joybutton_press(joystick, button):
         print("Turning off overwrite mode")
         overwrite = False
 
+        
 # Not sure what dt stands for lol
 def update(dt):
     """
@@ -138,9 +140,18 @@ def update(dt):
     detected, output_image = computer_vision.stop_line(image, output_image)
 
     if not overwrite and detected:
-        vel_left, vel_right = 0, 0
+        vel_left, vel_right = 0, 0  
+  
+    trafficlight_color_detected, output_image = computer_vision.trafficlight(image, output_image)
+  
+    if not overwrite:
+        if trafficlight_color_detected == 'red':
+            vel_left, vel_right = 0, 0
+        elif trafficlight_color_detected == 'green':
+            # Do something here?
+            pass
 
-    cv.imshow('stop', output_image)
+    cv.imshow('output_image', output_image)
     cv.waitKey(1)
 
     image = env.move([vel_left, vel_right])
@@ -165,7 +176,7 @@ def main():
     joystick.push_handlers(on_joybutton_press)
 
     cam_angle = env.unwrapped.cam_angle
-    cam_angle[0] -= 5
+    cam_angle[0] -= 7
 
     # Enter main event loop
     pyglet.app.run()
