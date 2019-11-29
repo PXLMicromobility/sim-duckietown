@@ -137,19 +137,16 @@ def update(dt):
 
     output_image = cv.cvtColor(image.copy(), cv.COLOR_RGB2BGR)
 
-    detected, output_image = computer_vision.stop_line(image, output_image)
+    stopline_detected, output_image = computer_vision.stop_line(image, output_image)
 
-    if not overwrite and detected:
-        vel_left, vel_right = 0, 0  
-  
     trafficlight_color_detected, output_image = computer_vision.trafficlight(image, output_image)
   
     if not overwrite:
-        if trafficlight_color_detected == 'red':
+        force_stop = stopline_detected and trafficlight_color_detected != 'green'
+        force_stop = force_stop or trafficlight_color_detected == 'red'
+
+        if force_stop:
             vel_left, vel_right = 0, 0
-        elif trafficlight_color_detected == 'green':
-            # Do something here?
-            pass
 
     cv.imshow('output_image', output_image)
     cv.waitKey(1)
@@ -157,6 +154,7 @@ def update(dt):
     image = env.move([vel_left, vel_right])
 
     env.render()
+
 
 def main():
     global joystick
@@ -176,12 +174,13 @@ def main():
     joystick.push_handlers(on_joybutton_press)
 
     cam_angle = env.unwrapped.cam_angle
-    cam_angle[0] -= 7
+    cam_angle[0] -= 6
 
     # Enter main event loop
     pyglet.app.run()
 
     env.close()
+
 
 if __name__ == '__main__':
     main()
