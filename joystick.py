@@ -142,17 +142,17 @@ def update(dt):
     image = env.render('rgb_array')
 
     if recording:
-        timestamp = int(time())
+        index = logger.next_index()
 
         logger.writecsv('tabular.csv', {
             'vel_left': vel_left,
             'vel_right': vel_right,
             'joy_x': joy_x,
             'joy_y': joy_y,
-            'timestamp': timestamp
+            'index': index
         })
 
-        logger.writeimg(f'{timestamp}.jpg', image)
+        logger.writeimg(f'{index}.jpg', image)
 
     image = env.move([vel_left, vel_right])
 
