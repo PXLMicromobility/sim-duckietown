@@ -112,8 +112,8 @@ def on_joybutton_press(_joystick, button):
         "power": _joystick.buttons[10],
 
         # These are actual presses on the joysticks, not all controllers have this
-        # "joy_left": joystick.buttons[11],
-        # "joy_right": joystick.buttons[12]
+        # "joy_left": _joystick.buttons[11],
+        # "joy_right": _joystick.buttons[12]
     }
 
     if (keys['cross'] or button == 0) and not overwrite:
@@ -123,7 +123,7 @@ def on_joybutton_press(_joystick, button):
         print("Turning off overwrite mode")
         overwrite = False
 
-
+        
 # Not sure what dt stands for lol
 def update(dt):
     """
@@ -137,8 +137,13 @@ def update(dt):
 
     output_image = cv.cvtColor(image.copy(), cv.COLOR_RGB2BGR)
 
-    trafficlight_color_detected, output_image = computer_vision.trafficlight(image, output_image)
+    detected, output_image = computer_vision.stop_line(image, output_image)
 
+    if not overwrite and detected:
+        vel_left, vel_right = 0, 0  
+  
+    trafficlight_color_detected, output_image = computer_vision.trafficlight(image, output_image)
+  
     if not overwrite:
         if trafficlight_color_detected == 'red':
             vel_left, vel_right = 0, 0
@@ -146,10 +151,9 @@ def update(dt):
             # Do something here?
             pass
 
-    cv.imshow('trafficlight', output_image)
+    cv.imshow('output_image', output_image)
     cv.waitKey(1)
 
-    # This returns the image, but we no longer need it :/
     image = env.move([vel_left, vel_right])
 
     env.render()
