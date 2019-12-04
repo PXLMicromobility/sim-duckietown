@@ -6,6 +6,7 @@
 """
 from duckietown import Duckietown
 from logger import Logger
+import cv2 as cv
 import computer_vision
 
 import pyglet
@@ -45,6 +46,7 @@ logger = Logger(args.logging_location)
 
 # Can the driver (user) overwrite the actions dictated by the computer-vision
 overwrite = False
+
 
 def read_joystick(base_velocity):
     global joystick
