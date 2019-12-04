@@ -18,10 +18,10 @@ import argparse
 
 parser = argparse.ArgumentParser(description='This script allows you to control a robot through a joystick in a gym environement')
 # parser.add_argument('--map-name', default='udem1', help='the name of the map')
-parser.add_argument('--map-name', default='4way', help='the name of the map')
+# parser.add_argument('--map-name', default='4way', help='the name of the map')
 # parser.add_argument('--map-name', default='loop_dyn_duckiebots', help='the name of the map')
 # parser.add_argument('--map-name', default='regress_4way_adam', help='the name of the map')
-# parser.add_argument('--map-name', default='zigzag_dists', help='the name of the map')
+parser.add_argument('--map-name', default='zigzag_dists', help='the name of the map')
 
 # The store_true option automatically creates a default value of False.
 parser.add_argument('--distortion', action='store_true', help='enable fish-eye effect on camera (bool)')
@@ -43,10 +43,10 @@ env.render()
 recording = False
 
 # The logger
-logger = Logger(args.logging_location, begin_index=59)
+logger = Logger(args.logging_location)
 
 
-def read_joystick():
+def read_joystick(base_velocity):
     global joystick
 
     # left-right on a joystick
@@ -56,10 +56,6 @@ def read_joystick():
 
     # Make sure that we only use inputs that are actually useful
     x, y = x if abs(x) > 0.01 else 0, y if abs(y) > 0.01 else 0
-
-    # How fast can each wheel move (0.35 gives you a maximum forward speed of about 0.4m/s)
-    # This also serves as the maximum speed of the wheels
-    base_velocity = 0.5
 
     # Which direction are we trying to go (-1 is back, 1 is forward)
     direction = -1 if y <= 0 else 1
@@ -159,7 +155,11 @@ def update(dt):
     """
     global recording, logger
 
-    joy_x, joy_y, vel_left, vel_right = read_joystick()
+    # How fast can each wheel move (0.35 gives you a maximum forward speed of about 0.4m/s)
+    # This also serves as the maximum speed of the wheels
+    base_velocity = 0.25
+
+    joy_x, joy_y, vel_left, vel_right = read_joystick(base_velocity)
 
     image = env.render('rgb_array')
 

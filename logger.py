@@ -10,23 +10,57 @@ import pandas as pd
 
 
 class Logger:
-    def __init__(self, location: str, begin_index: int = 0):
+    def __init__(self, location: str):
         self.location = location
+        self._zip_name = self.__get_zip_name()
         self.images_folder = f'{self.location}/images'
 
-        # TODO: mkdir if needed
         # We currently remove the dir and re-make one
         if os.path.exists(self.location):
             shutil.rmtree(self.location)
 
         os.makedirs(self.images_folder)
 
-        self._index = self._index_generator(begin_index)
+        self.__begin_index = self.__get_last_index()
+        self._index = Logger._index_generator(self.__begin_index + 1)
 
         self.has_recorded = False
 
-    def zip_exists(self) -> bool:
-        return os.path.exists(f'{self.location}.zip')
+    def __get_zip_name(self):
+        val = 0
+
+        while True:
+            if os.path.exists(f'{self.location}_{val}.zip'):
+                val += 1
+                continue
+
+            return f'{self.location}_{val}.zip'
+
+    def __get_last_index(self) -> int:
+        last_int = 0
+
+        if not os.path.exists(self._zip_name):
+            return last_int
+
+        with ZipFile(self._zip_name, 'r') as zf:
+            for item in zf.namelist():
+                if not item.endswith('.jpg'):
+                    continue
+
+                name, _ = os.path.splitext(item)
+
+                name = name.split('/')[1]
+
+                try:
+                    int(name)
+                except:
+                    # Name is not an int
+                    continue
+
+                if int(name) > last_int:
+                    last_int = int(name)
+
+        return last_int
 
     @staticmethod
     def _index_generator(begin_index: int):
@@ -34,6 +68,9 @@ class Logger:
         while True:
             yield index
             index += 1
+
+    def zip_exists(self):
+        return os.path.exists(self._zip_name)
 
     def next_index(self):
         return next(self._index)
@@ -62,33 +99,17 @@ class Logger:
         img.save(path)
 
     def log_to_zip(self, overwrite: bool = False):
-        if overwrite or not self.zip_exists():
-            mode = 'w'
-        else:
-            mode = 'a'
+        if not overwrite:
+            self._zip_name = self.__get_zip_name()
 
-        with ZipFile(f'{self.location}.zip', mode=mode) as zf:
+        with ZipFile(self._zip_name, mode='w') as zf:
             for item in os.listdir(self.location):
                 real_path = os.path.join(self.location, item)
 
                 if item.endswith('.csv'):
-                    if item in zf.namelist():
-                        # Combine the two csv files into one
-                        csv_in_zip = StringIO(str(zf.read(item), 'utf-8'))
-
-                        df = pd.read_csv(csv_in_zip)
-                        
-                        # We append the new data to the old one in the old file
-                        # TODO: this does write the new data first and then adds the new data :/
-                        df.to_csv(real_path, mode='a+', header=False, index=False)
-
                     # Overwrite the file, create if it doesn't exist yet
                     with zf.open(item, 'w') as csv_file:
                         csv_file.write(bytes(pd.read_csv(real_path).to_string(), 'utf-8'))
                 else:
-                    try:
-                        # We got a folder (images folder)
-                        for image in os.listdir(real_path):
-                            zf.write(os.path.join(self.location, item, image), f'images/{image}')
-                    except Warning:
-                        pass
+                    for image in os.listdir(real_path):
+                        zf.write(os.path.join(self.location, item, image), f'images/{image}')
