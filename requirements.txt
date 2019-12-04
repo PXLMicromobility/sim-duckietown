@@ -1,0 +1,5 @@
+numpy
+pandas
+PIL
+pyglet
+cv2

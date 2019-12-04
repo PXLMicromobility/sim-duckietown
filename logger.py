@@ -4,7 +4,6 @@ import shutil
 
 from zipfile import ZipFile
 from PIL import Image
-from io import StringIO
 
 import pandas as pd
 

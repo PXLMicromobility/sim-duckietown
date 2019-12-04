@@ -8,10 +8,7 @@ from duckietown import Duckietown
 from logger import Logger
 
 import pyglet
-import cv2 as cv
-import numpy as np
 import math
-from time import time
 
 # Get all the arguments we will need
 import argparse
