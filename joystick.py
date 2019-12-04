@@ -6,6 +6,7 @@
 """
 from duckietown import Duckietown
 from logger import Logger
+import computer_vision
 
 import pyglet
 import math
@@ -15,10 +16,10 @@ import argparse
 
 parser = argparse.ArgumentParser(description='This script allows you to control a robot through a joystick in a gym environement')
 # parser.add_argument('--map-name', default='udem1', help='the name of the map')
-# parser.add_argument('--map-name', default='4way', help='the name of the map')
+parser.add_argument('--map-name', default='4way', help='the name of the map')
 # parser.add_argument('--map-name', default='loop_dyn_duckiebots', help='the name of the map')
 # parser.add_argument('--map-name', default='regress_4way_adam', help='the name of the map')
-parser.add_argument('--map-name', default='zigzag_dists', help='the name of the map')
+# parser.add_argument('--map-name', default='zigzag_dists', help='the name of the map')
 
 # The store_true option automatically creates a default value of False.
 parser.add_argument('--distortion', action='store_true', help='enable fish-eye effect on camera (bool)')
@@ -42,6 +43,8 @@ recording = False
 # The logger
 logger = Logger(args.logging_location)
 
+# Can the driver (user) overwrite the actions dictated by the computer-vision
+overwrite = False
 
 def read_joystick(base_velocity):
     global joystick
@@ -88,10 +91,10 @@ def read_joystick(base_velocity):
 
 @env.unwrapped.window.event
 def on_joybutton_press(_joystick, button):
-    global recording, args, env, logger
+    global recording, args, env, logger, overwrite
 
     # A truth table for every button (bool)
-    # This is for a Dual-shock 4 controller (PS4)
+    # This is for a Dualshock 4 controller (PS4)
     keys = {
         "cross": _joystick.buttons[0],
         "circle": _joystick.buttons[1],
@@ -111,8 +114,13 @@ def on_joybutton_press(_joystick, button):
         # "joy_left": joystick.buttons[11],
         # "joy_right": joystick.buttons[12]
     }
-
-    if (keys['triangle'] or button == 2) and not recording:
+    if (keys['cross'] or button == 0) and not overwrite:
+        print("Turning on overwrite mode")
+        overwrite = True
+    elif (keys['circle'] or button == 1) and overwrite:
+        print("Turning off overwrite mode")
+        overwrite = False
+    elif (keys['triangle'] or button == 2) and not recording:
         print("Turning on recording mode")
         print('Location of log:', args.logging_location)
         recording = True
@@ -143,7 +151,7 @@ def on_joybutton_press(_joystick, button):
             logger.log_to_zip(overwrite=overwrite)
             print("Done writing")
 
-
+            
 # Not sure what dt stands for lol
 def update(dt):
     """
@@ -160,6 +168,25 @@ def update(dt):
 
     image = env.render('rgb_array')
 
+    output_image = cv.cvtColor(image.copy(), cv.COLOR_RGB2BGR)
+
+    detected, output_image = computer_vision.stop_line(image, output_image)
+
+    if not overwrite and detected:
+        vel_left, vel_right = 0, 0  
+  
+    trafficlight_color_detected, output_image = computer_vision.trafficlight(image, output_image)
+  
+    if not overwrite:
+        if trafficlight_color_detected == 'red':
+            vel_left, vel_right = 0, 0
+        elif trafficlight_color_detected == 'green':
+            # Do something here?
+            pass
+
+    cv.imshow('output_image', output_image)
+    cv.waitKey(1)
+    
     if recording:
         index = logger.next_index()
 
@@ -196,7 +223,7 @@ def main():
     joystick.push_handlers(on_joybutton_press)
 
     cam_angle = env.unwrapped.cam_angle
-    cam_angle[0] -= 5
+    cam_angle[0] -= 7
 
     # Enter main event loop
     pyglet.app.run()
