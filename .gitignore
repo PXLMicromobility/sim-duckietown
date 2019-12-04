@@ -105,6 +105,7 @@ venv.bak/
 
 # .idea folder
 .idea/
+recording*
 
 # Test scripts
 test.py

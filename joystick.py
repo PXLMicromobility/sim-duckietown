@@ -5,13 +5,11 @@
     It allows for more control than the original script
 """
 from duckietown import Duckietown
+from logger import Logger
 import computer_vision
 
 import pyglet
-import cv2 as cv
-import numpy as np
 import math
-from time import time
 
 # Get all the arguments we will need
 import argparse
@@ -26,24 +24,29 @@ parser.add_argument('--map-name', default='4way', help='the name of the map')
 # The store_true option automatically creates a default value of False.
 parser.add_argument('--distortion', action='store_true', help='enable fish-eye effect on camera (bool)')
 parser.add_argument('--draw-curve', action='store_true', help='draw the lane following curve')
-parser.add_argument('--logging-location', default='recording.log', help='the name of a log file (recording of actions)')
+parser.add_argument('--logging-location', default='recording', help='the name of a log file (recording of actions)')
 args = parser.parse_args()
 
 # Create the duckietown environment
 env = Duckietown(
-    map_name = args.map_name,
-    distortion = args.distortion,
-    draw_curve = args.draw_curve
+    map_name=args.map_name,
+    distortion=args.distortion,
+    draw_curve=args.draw_curve
 )
 
 env.reset()
 env.render()
 
+# Are we recording?
+recording = False
+
+# The logger
+logger = Logger(args.logging_location)
+
 # Can the driver (user) overwrite the actions dictated by the computer-vision
 overwrite = False
 
-
-def read_joystick():
+def read_joystick(base_velocity):
     global joystick
 
     # left-right on a joystick
@@ -51,12 +54,8 @@ def read_joystick():
     # up-down on a joystick
     y = -round(joystick.y, 2)
 
-    # Make sure that we only use inputs that are actually usefull
+    # Make sure that we only use inputs that are actually useful
     x, y = x if abs(x) > 0.01 else 0, y if abs(y) > 0.01 else 0
-
-    # How fast can each wheel move (0.35 gives you a maximum forward speed of about 0.4m/s)
-    # This also serves as the maximum speed of the wheels
-    base_velocity = 0.5
 
     # Which direction are we trying to go (-1 is back, 1 is forward)
     direction = -1 if y <= 0 else 1
@@ -87,12 +86,12 @@ def read_joystick():
             vel_left, vel_right = max(-base_velocity, vel_left), max(-base_velocity, vel_right)
             vel_left, vel_right = min(0, vel_left), min(0, vel_right)
 
-    return vel_left, vel_right
+    return x, y, vel_left, vel_right
 
 
 @env.unwrapped.window.event
 def on_joybutton_press(_joystick, button):
-    global overwrite, args
+    global recording, args, env, logger, overwrite
 
     # A truth table for every button (bool)
     # This is for a Dualshock 4 controller (PS4)
@@ -112,27 +111,61 @@ def on_joybutton_press(_joystick, button):
         "power": _joystick.buttons[10],
 
         # These are actual presses on the joysticks, not all controllers have this
-        # "joy_left": _joystick.buttons[11],
-        # "joy_right": _joystick.buttons[12]
+        # "joy_left": joystick.buttons[11],
+        # "joy_right": joystick.buttons[12]
     }
-
     if (keys['cross'] or button == 0) and not overwrite:
         print("Turning on overwrite mode")
         overwrite = True
     elif (keys['circle'] or button == 1) and overwrite:
         print("Turning off overwrite mode")
         overwrite = False
+    elif (keys['triangle'] or button == 2) and not recording:
+        print("Turning on recording mode")
+        print('Location of log:', args.logging_location)
+        recording = True
+    elif (keys['square'] or button == 3) and recording:
+        print("Turning off recording mode")
+        print('Location of log:', args.logging_location)
+        recording = False
+    elif keys['options'] or button == 9:
+        print("Stopping the simulation")
+        pyglet.app.exit()
+        env.close()
+    elif keys['share'] or button == 8:
+        if logger.has_recorded:
+            print("Writing the logs to a zip-file, don't exit")
 
-        
+            overwrite = True
+            if logger.zip_exists():
+                mode = input('Do you want to overwrite? (y/n): ')
+
+                if mode == 'y':
+                    overwrite = True
+                elif mode == 'n':
+                    overwrite = False
+                else:
+                    print('oops?', mode, type(mode))
+                    return
+
+            logger.log_to_zip(overwrite=overwrite)
+            print("Done writing")
+
+            
 # Not sure what dt stands for lol
 def update(dt):
     """
         This method is called every frame to update the screen.
         This method handles the movement of the duckiebot.
     """
-    vel_left, vel_right = read_joystick()
+    global recording, logger
 
-    # Used for computer vision
+    # How fast can each wheel move (0.35 gives you a maximum forward speed of about 0.4m/s)
+    # This also serves as the maximum speed of the wheels
+    base_velocity = 0.25
+
+    joy_x, joy_y, vel_left, vel_right = read_joystick(base_velocity)
+
     image = env.render('rgb_array')
 
     output_image = cv.cvtColor(image.copy(), cv.COLOR_RGB2BGR)
@@ -153,10 +186,24 @@ def update(dt):
 
     cv.imshow('output_image', output_image)
     cv.waitKey(1)
+    
+    if recording:
+        index = logger.next_index()
+
+        logger.writecsv('tabular.csv', {
+            'vel_left': vel_left,
+            'vel_right': vel_right,
+            'joy_x': joy_x,
+            'joy_y': joy_y,
+            'index': index
+        })
+
+        logger.writeimg(f'{index}.jpg', image)
 
     image = env.move([vel_left, vel_right])
 
     env.render()
+
 
 def main():
     global joystick
@@ -181,7 +228,6 @@ def main():
     # Enter main event loop
     pyglet.app.run()
 
-    env.close()
 
 if __name__ == '__main__':
     main()
