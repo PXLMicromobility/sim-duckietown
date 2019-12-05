@@ -80,8 +80,11 @@ class Logger:
 
         path = f'{self.location}/{name}'
 
+	# Is this the first time we are writing to this file?
+	first_time = not os.path.isfile(path)
+
         with open(path, 'a+') as csv:
-            if not os.path.isfile(path):
+            if first_time:
                 print('Creating csv file')
                 csv.write('vel_left,vel_right,joy_x,joy_y,index\n')
 
