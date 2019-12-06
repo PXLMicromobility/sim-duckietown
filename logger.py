@@ -36,7 +36,7 @@ class Logger:
             return f'{self.location}_{val}.zip'
 
     def __get_last_index(self) -> int:
-        last_int = 0
+        last_int = -1
 
         if not os.path.exists(self._zip_name):
             return last_int
@@ -80,8 +80,8 @@ class Logger:
 
         path = f'{self.location}/{name}'
 
-	# Is this the first time we are writing to this file?
-	first_time = not os.path.isfile(path)
+        # Is this the first time we are writing to this file?
+        first_time = not os.path.isfile(path)
 
         with open(path, 'a+') as csv:
             if first_time:
