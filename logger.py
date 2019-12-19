@@ -78,7 +78,7 @@ class Logger:
         if not self.has_recorded:
             self.has_recorded = True
 
-        path = f'{self.location}/{name}'
+        path = f'{self.location}/{name}.csv'
 
         # Is this the first time we are writing to this file?
         first_time = not os.path.isfile(path)
@@ -95,7 +95,10 @@ class Logger:
         if not self.has_recorded:
             self.has_recorded = True
 
-        path = f'{self.location}/images/{name}'
+        if not isinstance(img, np.ndarray):
+            raise TypeError('The image needs to be a numpy array')
+
+        path = f'{self.location}/images/{name}.jpg'
 
         img = Image.fromarray(img)
         img.save(path)
