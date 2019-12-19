@@ -97,9 +97,6 @@ class Logger:
         if not self.has_recorded:
             self.has_recorded = True
 
-        if not isinstance(img, np.ndarray):
-            raise TypeError('The image needs to be a numpy array')
-
         path = f'{self.location}/images/{name}.jpg'
 
         img = Image.fromarray(img)

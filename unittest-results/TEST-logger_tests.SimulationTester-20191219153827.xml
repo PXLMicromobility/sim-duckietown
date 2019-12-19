@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite errors="0" failures="0" file="logger_tests.py" name="logger_tests.SimulationTester-20191219153827" skipped="0" tests="2" time="0.041" timestamp="2019-12-19T15:38:27">
+	<testcase classname="logger_tests.SimulationTester" file="tests/logger_tests.py" line="32" name="test_writecsv" time="0.009" timestamp="2019-12-19T15:38:27">
+		<system-out>
+<![CDATA[Creating csv file
+]]>		</system-out>
+		<system-err>
+<![CDATA[]]>		</system-err>
+	</testcase>
+	<testcase classname="logger_tests.SimulationTester" file="tests/logger_tests.py" line="17" name="test_writeimg" time="0.032" timestamp="2019-12-19T15:38:27">
+		<system-out>
+<![CDATA[]]>		</system-out>
+		<system-err>
+<![CDATA[]]>		</system-err>
+	</testcase>
+</testsuite>
