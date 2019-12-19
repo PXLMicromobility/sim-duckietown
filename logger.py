@@ -89,6 +89,8 @@ class Logger:
             csv.write(f"{data['vel_left']},{data['vel_right']},{data['joy_x']},{data['joy_y']},{data['index']}\n")
 
     def writeimg(self, name: str, img: np.ndarray):
+        if not isinstance(img, np.ndarray):
+            raise TypeError(f"img cannot be of type: {type(img)}")
         if not self.has_recorded:
             self.has_recorded = True
 

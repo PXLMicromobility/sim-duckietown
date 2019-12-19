@@ -1,0 +1,6 @@
+import unittest
+import PIL
+
+class SimulationTester(unittest.TestCase):
+    def test_writeimage():
+        
