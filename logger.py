@@ -36,7 +36,7 @@ class Logger:
             return f'{self.location}_{val}.zip'
 
     def __get_last_index(self) -> int:
-        last_int = 0
+        last_int = -1
 
         if not os.path.exists(self._zip_name):
             return last_int
@@ -78,10 +78,13 @@ class Logger:
         if not self.has_recorded:
             self.has_recorded = True
 
-        path = f'{self.location}/{name}'
+        path = f'{self.location}/{name}.csv'
+
+        # Is this the first time we are writing to this file?
+        first_time = not os.path.isfile(path)
 
         with open(path, 'a+') as csv:
-            if not os.path.isfile(path):
+            if first_time:
                 print('Creating csv file')
                 csv.write('vel_left,vel_right,joy_x,joy_y,index\n')
 
@@ -94,7 +97,10 @@ class Logger:
         if not self.has_recorded:
             self.has_recorded = True
 
-        path = f'{self.location}/images/{name}'
+        if not isinstance(img, np.ndarray):
+            raise TypeError('The image needs to be a numpy array')
+
+        path = f'{self.location}/images/{name}.jpg'
 
         img = Image.fromarray(img)
         img.save(path)

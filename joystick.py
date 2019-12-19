@@ -192,7 +192,7 @@ def update(dt):
     if recording:
         index = logger.next_index()
 
-        logger.writecsv('tabular.csv', {
+        logger.writecsv('tabular', {
             'vel_left': vel_left,
             'vel_right': vel_right,
             'joy_x': joy_x,
@@ -200,7 +200,7 @@ def update(dt):
             'index': index
         })
 
-        logger.writeimg(f'{index}.jpg', image)
+        logger.writeimg(f'{index}', image)
 
     image = env.move([vel_left, vel_right])
 
